@@ -1,0 +1,134 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+```{r load-data}
+load("brfss2013.RData")
+```
+
+
+
+* * *
+
+## Part 1: Data
+* * *
+What is BRFSS?
+The Behavioral Risk Factor Surveillance System (BRFSS) is a collaborative project between all of the states in the United States (US) and participating US territories and the Centers for Disease Control and Prevention (CDC). The BRFSS is administered and supported by CDC’s Population Health Surveillance Branch, under the Division of Population Health at the National Center for Chronic Disease Prevention and Health Promotion.
+The BRFSS objective is to collect uniform, state-specific data on preventive health practices and risk behaviors that are linked to chronic diseases, injuries, and preventable infectious diseases that affect the adult population.
+
+What was the sample and data?
+The BRFSS collects data from adults aged 18 years or older. The 2013 data set(brfss2013) consists of 491775 observations and 330 variables.
+
+How was the data collected?
+BRFSS conducts both landline telephone- and cellular telephone-based surveys. In conducting the BRFSS landline telephone survey, interviewers collect data from a randomly selected adult in a household. In conducting the cellular telephone version of the BRFSS questionnaire, interviewers collect data from an adult who participates by using a cellular telephone and resides in a private residence or college housing.
+
+## Part 2: Research questions
+
+**Research quesion 1:**
+Does sleeping hours affect blood pressure levels?
+
+**Research quesion 2:**
+Does carbonated drinks cause diabetes or kidney diseases? 
+
+**Research quesion 3:**
+Does smoking at least a 100 cigarettes cause cancer(skin or any other type)?
+
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+**Research quesion 1:**
+Does sleeping hours affect blood pressure levels?
+Variables Used: sleptim1,bphigh4
+
+```{r}
+sl_dep <- brfss2013 %>%
+  filter(!is.na(sleptim1),!is.na(bphigh4)) %>%
+  select(sleptim1,bphigh4)
+  
+causes_hbp<- sl_dep %>%
+  filter(sleptim1<5) %>%
+  group_by(bphigh4) %>%
+  summarise(count=n())
+causes_hbp
+
+causes_hbp_inspite_of_sleep<- sl_dep %>%
+  filter(sleptim1>5) %>%
+  group_by(bphigh4) %>%
+  summarise(count=n())
+causes_hbp_inspite_of_sleep
+```
+
+```{r}
+ ggplot(data=causes_hbp,aes(x=bphigh4,y=count))+geom_bar(stat="identity",color='black',fill='blue')+xlab("Is blood pressure high with <5 hours of sleep?")+ylab("Number of US citizens ")
+
+
+ggplot(data=causes_hbp_inspite_of_sleep,aes(x=bphigh4,y=count))+geom_bar(stat="identity",color='black',fill='blue')+xlab("Is blood pressure high with >5 hours of sleep?")+ylab("Number of US citizens ")
+```
+
+
+There is not considerable difference between the people who suffer from high blood pressure and those who do not in the sample of people who sleep less than 5 hours.But there is a huge difference between the two groups(Yes and No to blood pressure) in the sample of US citizens who sleep more than 5 hours.
+
+Thus the effect of sleep on blood pressure is more evident in people who sleep more than 5hrs, they tend to have no blood pressure. We cannot say conclusively that the number of hours of sleep is the sole causation of blood pressure but they are correlated.
+
+
+**Research quesion 2:**
+Does carbonated drinks cause diabetes or kidney diseases? 
+Variables used: ssbsugar,diabete3,chckidny
+
+```{r}
+carb_drnks <- brfss2013 %>%
+ filter(!is.na(ssbsugar),!is.na(diabete3),!is.na(chckidny)) %>%
+ select(ssbsugar,diabete3,chckidny)
+carb_drnks <- carb_drnks %>%
+ mutate(yes_it_causes = ifelse(ssbsugar> 200 & (diabete3 == "Yes" | chckidny =="Yes")  ,"Yes","No"))
+yes_it_causes<- carb_drnks  %>%
+     group_by(yes_it_causes) %>%
+     summarise(count=n())
+ggplot(data=yes_it_causes,aes(x=yes_it_causes,y=count))+geom_bar(stat="identity",color = "blue",fill = "yellow")+xlab("Carbonated Drinks + Diabetes + Kidney Diseases")+ylab("Number of US citizens ")
+```
+
+
+Carbonated drinks like soda and pop does not causes diabetes or kidney diseases. Other factors should also be considered. The percentage of the population affected by diabetes or kidney diseases by carbonated drinks is very small.
+
+
+**Research quesion 3:**
+Does smoking at least a 100 cigarettes cause cancer(skin or any other type)?
+
+Variables used: smoke100,chcscncr,chcocncr
+
+```{r}
+smkng_cncr  <- brfss2013 %>%
+  filter(!is.na(smoke100),!is.na(chcscncr),!is.na(chcocncr)) %>%
+  select(smoke100,chcscncr,chcocncr)
+
+smkng_cncr <- smkng_cncr  %>%
+  mutate(lead_to_cncr = ifelse(smoke100=="Yes"& (chcscncr=="Yes" | chcocncr=="Yes"),"Yes","No"))
+  
+ lead_to_cncr<- smkng_cncr  %>%
+  group_by(lead_to_cncr) %>%
+  summarise(count=n())
+ lead_to_cncr
+
+ggplot(data=lead_to_cncr,aes(x=lead_to_cncr,y=count))+geom_bar(stat="identity")+xlab("Does smoking cause skin or any other cancer?")+ylab("Number of US citizens ")
+
+```
+
+These bar graphs indicate that smoking at least a 100 cigarettes does not cause skin or any other type of cancer.There is a small percentage who got cancer and had smoked at least a 100 cigarettes but  results are overwhelmingly negative. We can't say conclusively since financial income,lifestyle are other factors that can affect this.
